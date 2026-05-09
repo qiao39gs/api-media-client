@@ -1934,7 +1934,10 @@ function getGPTImageStreamFailureKind(error: unknown): GPTImageStreamFailureKind
   const normalizedMessage = message.replace(/\\n/g, '\n')
   const looksLikeProxyParseFailure =
     /bad_response_body|syntax error|invalid char/i.test(normalizedMessage) &&
-    /event:\s*(image_generation|response)\./i.test(normalizedMessage)
+    (
+      /event:\s*(image_generat|image_generation|response)/i.test(normalizedMessage) ||
+      /(^|\n)\s*:\s*(\n|$)/.test(normalizedMessage)
+    )
 
   return looksLikeProxyParseFailure ? 'unsupported_stream_proxy' : null
 }
@@ -2442,6 +2445,10 @@ function hasGPTResponsesImageCall(response: any): boolean {
   )
 }
 
+function shouldUseGPTImageRevisedPrompt(): boolean {
+  return actualGPTModel.value !== 'gpt-image-2'
+}
+
 async function retrieveGPTResponse(
   responseId: string,
   sourceSignal: AbortSignal
@@ -2510,7 +2517,7 @@ function extractGPTImageUrlsFromResponse(response: any): string[] {
       urls.push(item.url)
     }
 
-    if (item.revised_prompt) {
+    if (item.revised_prompt && shouldUseGPTImageRevisedPrompt()) {
       gptRevisedPrompt.value = item.revised_prompt
     }
   }
